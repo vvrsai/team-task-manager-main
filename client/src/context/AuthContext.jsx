@@ -1,31 +1,55 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
+
+  // ✅ SAFE USER PARSE (FIXED)
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    try {
+      const stored = localStorage.getItem('user');
+
+      // handle empty / invalid values
+      if (!stored || stored === "undefined") return null;
+
+      return JSON.parse(stored);
+    } catch (err) {
+      console.error("Invalid user in localStorage:", err);
+      localStorage.removeItem('user'); // clean bad data
+      return null;
+    }
   });
+
   const [loading, setLoading] = useState(false);
 
+  // ✅ LOGIN
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+
+    localStorage.setItem('token', data.token || '');
+
+    // ✅ SAFE STORE
+    localStorage.setItem('user', JSON.stringify(data.user || null));
+
+    setUser(data.user || null);
     return data.user;
   };
 
+  // ✅ SIGNUP
   const signup = async (name, email, password, role) => {
     const { data } = await api.post('/auth/signup', { name, email, password, role });
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    setUser(data.user);
+
+    localStorage.setItem('token', data.token || '');
+
+    // ✅ SAFE STORE
+    localStorage.setItem('user', JSON.stringify(data.user || null));
+
+    setUser(data.user || null);
     return data.user;
   };
 
+  // ✅ LOGOUT
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -39,4 +63,5 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// ✅ CUSTOM HOOK
 export const useAuth = () => useContext(AuthContext);
